@@ -147,7 +147,7 @@ class IceGridModule(Ice.Application):
             self.servers = self.allServers
         elif not self.skip:
             nonExistantServers = [m for m in self.servers if m not in self.allServers]
-            if not nonExistantServers:
+            if nonExistantServers:
                 self.module.fail_json(msg="The following servers do not exist: {}".format(', '.join(nonExistantServers)))
         else:
             self.servers = [m for m in self.servers if m in self.allServers]

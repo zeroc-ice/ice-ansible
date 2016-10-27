@@ -28,12 +28,18 @@
 
   - icegrid_servers:
       state: started
+      servers:
+        - SimpleServer
+        - DoesNotExistServer
+      skip: yes
       config: "{{ config }}"
       username: foo
       password: bar
 
   - icegrid_servers:
       enabled: no
+      servers:
+        - SimpleServer
       config: "{{ config }}"
       locator: "{{ locator }}"
       username: foo
