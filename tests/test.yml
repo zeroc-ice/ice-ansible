@@ -1,0 +1,12 @@
+- hosts: localhost
+  tasks:
+    - name: IceGrid Testing
+      icegrid_servers:
+        state: stopped
+        enabled: no
+        locator: 'DemoIceGrid/Locator:default -h localhost -p 4061'
+        username: foo
+        password: bar
+      register: result
+
+    - debug: var=result
