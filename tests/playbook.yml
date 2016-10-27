@@ -1,0 +1,23 @@
+- hosts: all
+  vars:
+    ice_demos: "{{ ansible_env.HOME }}/ice-demos"
+    python_demos: "{{ ice_demos }}/python"
+  tasks:
+    - apt_key: keyserver=keyserver.ubuntu.com id=5E6DA83306132997
+      become: true
+
+    - apt_repository: repo="deb http://zeroc.com/download/apt/ubuntu16.04 stable main" state=present
+      become: true
+
+    - apt: name={{ item }} state=present
+      with_items:
+        - zeroc-ice-all-runtime
+        - zeroc-ice-all-dev
+      become: true
+
+    - git: repo=https://github.com/zeroc-ice/ice-demos.git dest={{ ice_demos }} version=3.6
+
+    - include: icegrid.yml
+      vars:
+        locator: DemoIceGrid/Locator:default -h localhost -p 4061
+        config: "{{ python_demos }}/IceGrid/simple/config.client"

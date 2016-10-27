@@ -1,0 +1,46 @@
+---
+- block:
+
+  - name: Start IceGrid Registry
+    command: icegridnode --daemon --pidfile icegrid.pid --nochdir --Ice.Config=config.grid
+    args:
+      chdir: "{{ python_demos }}/IceGrid/simple"
+
+  - name: IceGrid | Add Application
+    command: icegridadmin --Ice.Config=config.grid -e "application add application.xml"
+    args:
+      chdir: "{{ python_demos }}/IceGrid/simple"
+    register: add_application
+    failed_when: "'already exists' not in add_application.stderr"
+
+  - icegrid_servers:
+      state: stopped
+      enabled: no
+      locator: "{{ locator }}"
+      username: foo
+      password: bar
+
+  - icegrid_servers:
+      enabled: yes
+      locator: "{{ locator }}"
+      username: foo
+      password: bar
+
+  - icegrid_servers:
+      state: started
+      config: "{{ config }}"
+      username: foo
+      password: bar
+
+  - icegrid_servers:
+      enabled: no
+      config: "{{ config }}"
+      locator: "{{ locator }}"
+      username: foo
+      password: bar
+
+  always:
+    - name: Stop IceGrid Registry
+      command: pkill -F icegrid.pid
+      args:
+        chdir: "{{ python_demos }}/IceGrid/simple"
