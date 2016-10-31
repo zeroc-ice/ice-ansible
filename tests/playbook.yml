@@ -1,32 +1,35 @@
 - hosts: all
+
   vars:
     ice_demos: "{{ ansible_env.HOME }}/ice-demos"
     python_demos: "{{ ice_demos }}/python"
+
   tasks:
-    - apt_key: keyserver=keyserver.ubuntu.com id=5E6DA83306132997
+    - name: Add ZeroC GPG Key
+      apt_key: keyserver=keyserver.ubuntu.com id=5E6DA83306132997
       become: yes
 
-    - apt_repository: repo="deb http://zeroc.com/download/apt/ubuntu16.04 stable main" state=present
+    - name: Add Ice Apt Repository
+      apt_repository: repo="deb http://zeroc.com/download/apt/ubuntu16.04 stable main" state=present
       become: yes
 
-    - name: Install Apt Packages
+    - name: Install Python, pip, and dependencies
       apt: name={{ item }} state=present
       with_items:
         - zeroc-ice-all-runtime
         - zeroc-ice-all-dev
-        - python
         - python-pip
         - libbz2-dev
         - libssl-dev
-      become: yes
+      become: true
 
     - name: Upgrade pip
       pip: name=pip extra_args=--upgrade
-      become: yes
+      become: true
 
     - name: Install Ice for Python
       pip: name=zeroc-ice extra_args="--install-option --with-installed-ice"
-      become: yes
+      become: true
 
     - git: repo=https://github.com/zeroc-ice/ice-demos.git dest={{ ice_demos }} version=3.6
 
