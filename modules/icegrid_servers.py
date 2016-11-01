@@ -13,14 +13,17 @@ short_description: Control servers running on an IceGrid Registry
 description:
     - Start, stop, enable, and disable servers controlled by an IceGrid Registry. Ice for Python is required.
 options:
-    locator:
+    host:
         required: false
         description:
-            - IceGrid locator. (Required if config file does not specify Ice.Default.Locator)
+            - IceGrid registry host. Defaults to localhost.
+    port:
+        required: false
+            - IceGrid registry port. Defaults to 4061.
     config:
         required: false
         description:
-            - Ice Configuration file. (Must contain Ice.Default.Locator if locator is not set)
+            - Ice Configuration file.
     servers:
         required: false
         description:
@@ -64,10 +67,7 @@ options:
 
 EXAMPLES = '''
 # Example action to start all servers, if not running
-- icegrid_servers: locator="DemoIceGrid/Locator:default -h localhost -p 4061" state=started
-
-# Example action to enable all servers, if not enabled, using configuration file
-- icegrid_servers: config=config.grid enabled=yes
+- icegrid_servers: state=started
 '''
 
 RETURN = '''
@@ -104,7 +104,9 @@ class IceGridModule(Ice.Application):
     def __init__(self, module):
         Ice.Application.__init__(self)
         self.module         = module
-        self.locator        = module.params['locator']
+        self.host           = module.params['host']
+        self.port           = module.params['port']
+        self.config         = module.params['config']
         self.servers        = module.params['servers']
         self.state          = module.params['state']
         self.enabled        = module.params['enabled']
@@ -118,16 +120,16 @@ class IceGridModule(Ice.Application):
     def run(self, args):
         comm = self.communicator()
 
-        if self.locator is not None:
-            try:
-                locatorPrx = Ice.LocatorPrx.uncheckedCast(comm.stringToProxy(self.locator))
-                comm.setDefaultLocator(locatorPrx)
-            except Ice.IdentityParseException as ex:
-                self.module.fail_json(msg="Failed to parse locator. {}".format(ex))
+        if self.config is None:
+            locatorFinderStr = "Ice/LocatorFinder:default -h {} -p {}".format(self.host, self.port)
+            prx = comm.stringToProxy(locatorFinderStr)
+            finder = Ice.LocatorFinderPrx.checkedCast(prx)
+            locator = finder.getLocator()
+            comm.setDefaultLocator(locator);
 
         try:
-            category = comm.getDefaultLocator().ice_getIdentity().category
-            registry = IceGrid.RegistryPrx.checkedCast(comm.stringToProxy(category + "/Registry"))
+            identity = Ice.Identity('Registry', comm.getDefaultLocator().ice_getIdentity().category)
+            registry = IceGrid.RegistryPrx.checkedCast(comm.stringToProxy(comm.identityToString(identity)))
         except Ice.LocalException as ex:
             self.module.fail_json(msg="Error connecting to IceGrid Registry. {}".format(ex))
 
@@ -245,7 +247,8 @@ class IceGridModule(Ice.Application):
 
 def main():
     argument_spec = dict(
-        locator=dict(required=False, default=None, type='str'),
+        host=dict(required=False, default='localhost', type='str'),
+        port=dict(required=False, default=4061, type='int'),
         config=dict(required=False, default=None, type='path'),
         servers=dict(required=False, default=None, type='list'),
         state=dict(required=False, choices=['started', 'stopped'], default=None, type='str'),
@@ -259,10 +262,7 @@ def main():
 
     module = AnsibleModule(argument_spec = argument_spec)
 
-    if module.params['locator'] is None and module.params['config'] is None:
-        module.fail_json(msg="One of 'locator' or 'config' must be set.")
-
-    if module.params['state'] is None and module.params['enabled'] is None:
+    if module.params['state'] == None and module.params['enabled'] == None:
         module.fail_json(msg="One of 'state' or 'enabled' must be set.")
 
     if not module.params['secure'] and module.params['username'] is None or module.params['password'] is None:
